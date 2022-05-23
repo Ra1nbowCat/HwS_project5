@@ -10,11 +10,14 @@ import UIKit
 class ViewController: UITableViewController {
     var allWords = [String]()
     var usedWords = [String]()
+    var errorTitle: String!
+    var errorMessage: String!
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(promptForAnswer))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(refreshGame))
         
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String(contentsOf: startWordsURL) {
@@ -45,6 +48,10 @@ class ViewController: UITableViewController {
         return cell
     }
     
+    @objc func refreshGame() {
+        startGame()
+    }
+    
     @objc func promptForAnswer() {
         let ac = UIAlertController(title: "Enter Answer", message: nil, preferredStyle: .alert)
         ac.addTextField()
@@ -59,33 +66,40 @@ class ViewController: UITableViewController {
         present(ac, animated: true)
     }
     
+    func showErrorMessage(title: String, message: String) {
+        errorTitle = title
+        errorMessage = message
+    }
+    
     func submit (_ answer: String) {
         let lowerAnswer = answer.lowercased()
-        
-        let errorTitle: String
-        let errorMessage: String
         
         if isPossible(word: lowerAnswer) {
             if isOriginal(word: lowerAnswer) {
                 if isReal(word: lowerAnswer) {
-                    usedWords.insert(answer, at: 0)
-                    
-                    let indexPath = IndexPath(row: 0, section: 0)
-                    tableView.insertRows(at: [indexPath], with: .automatic)
-                    
-                    return
-                } else {
-                    errorTitle = "Word not recognize"
-                    errorMessage = "You can't make them up!"
+                    if isLongEnough(word: lowerAnswer) {
+                        if isSameWord(word: lowerAnswer) {
+                        usedWords.insert(lowerAnswer, at: 0)
+                        
+                        let indexPath = IndexPath(row: 0, section: 0)
+                        tableView.insertRows(at: [indexPath], with: .automatic)
+                        
+                        return
+                                } else {
+                                    showErrorMessage(title: "This is the same word!", message: "You're trying to add the same word")
+                                }
+                            } else {
+                                showErrorMessage(title: "Short word", message: "Please, add word that are more than 3 characters")
+                        }
+                    } else {
+                    showErrorMessage(title: "Word not recognize", message: "You can't make them up!")
                 }
             } else {
-                errorTitle = "Word already used"
-                errorMessage = "Need originality!"
+                showErrorMessage(title: "Word already used", message: "Need originality!")
             }
         } else {
             guard let title = title else {return}
-            errorTitle = "Word not possible"
-            errorMessage = "You can't spell that word from \(title.lowercased())."
+            showErrorMessage(title: "Word not possible", message: "You can't spell that word from \(title.lowercased()).")
         }
         
         let ac = UIAlertController(title: errorTitle, message: errorMessage, preferredStyle: .alert)
@@ -116,6 +130,22 @@ class ViewController: UITableViewController {
         let range = NSRange.init(location: 0, length: word.utf16.count)
         let missspelledRange = checker.rangeOfMisspelledWord(in: word, range: range, startingAt: 0, wrap: false, language: "en")
         return missspelledRange.location == NSNotFound
+    }
+    
+    func isLongEnough(word: String) -> Bool {
+        if word.count < 3 {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    func isSameWord(word: String) -> Bool {
+        if word == title {
+            return false
+        } else {
+            return true
+        }
     }
 }
 

@@ -12,6 +12,8 @@ class ViewController: UITableViewController {
     var usedWords = [String]()
     var errorTitle: String!
     var errorMessage: String!
+    var currentWord: String?
+    var lastWord: String?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,11 +31,40 @@ class ViewController: UITableViewController {
             allWords = ["none word"]
         }
         
-        startGame()
+        let defaults = UserDefaults.standard
+        if let savedData = defaults.object(forKey: "lastWord") as? Data {
+            let jsonDecoder = JSONDecoder()
+            
+            do {
+                lastWord = try jsonDecoder.decode(String.self, from: savedData)
+            } catch {
+                print("Failed to decode")
+            }
+        }
+        
+        if let savedData2 = defaults.object(forKey: "usedWords") as? Data {
+            let jsonDecoder = JSONDecoder()
+            
+            do {
+                usedWords = try jsonDecoder.decode([String].self, from: savedData2)
+            } catch {
+                print("Failed to decode")
+            }
+        }
+        
+        if lastWord == nil {
+            startGame()
+        } else {
+            title = lastWord
+        }
+        
     }
     
     func startGame() {
-        title = allWords.randomElement()
+        currentWord = allWords.randomElement()
+        title = currentWord
+        lastWord = currentWord
+        saveLastWord()
         usedWords.removeAll(keepingCapacity: true)
         tableView.reloadData()
     }
@@ -45,6 +76,8 @@ class ViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Word", for: indexPath)
         cell.textLabel?.text = usedWords[indexPath.row]
+        saveUsedWords()
+        print(usedWords)
         return cell
     }
     
@@ -145,6 +178,28 @@ class ViewController: UITableViewController {
             return false
         } else {
             return true
+        }
+    }
+    
+    func saveLastWord() {
+        let jsonEncoder = JSONEncoder()
+        
+        if let savedData = try? jsonEncoder.encode(lastWord) {
+            let defaults = UserDefaults.standard
+            defaults.set(savedData, forKey: "lastWord")
+        } else {
+            print("Failed to encode")
+        }
+    }
+    
+    func saveUsedWords() {
+        let jsonEncoder = JSONEncoder()
+
+        if let savedData = try? jsonEncoder.encode(usedWords) {
+            let defaults = UserDefaults.standard
+            defaults.set(savedData, forKey: "usedWords")
+        } else {
+            print("Failed to encode")
         }
     }
 }
